@@ -17,33 +17,36 @@ import secrets
 import time
 from http.cookies import SimpleCookie
 from pathlib import Path
-from urllib.parse import parse_qs
 
 COOKIE = "lights_session"
 MAX_FAILS, LOCK_S = 5, 60.0
 OPEN_PATHS = ("/login", "/api/login", "/pair", "/static/", "/manifest.webmanifest", "/sw.js", "/icons/", "/favicon.ico")
 
 
-def is_lan_address(host: str | None) -> bool:
-    if not host:
-        return False
+_LAN_NETS = [ipaddress.ip_network(n) for n in (
+    "127.0.0.0/8", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "169.254.0.0/16",   # IPv4 loopback / private / link-local
+    "::1/128", "fc00::/7", "fe80::/10")]                                                 # IPv6 loopback / ULA / link-local
+
+
+def _ip(host: str | None):
     try:
-        ip = ipaddress.ip_address(host.split("%")[0])
+        ip = ipaddress.ip_address((host or "").split("%")[0])
     except ValueError:
-        return False
+        return None
     if ip.version == 6 and ip.ipv4_mapped:
         ip = ip.ipv4_mapped
-    return ip.is_loopback or ip.is_private or ip.is_link_local
+    return ip
+
+
+def is_lan_address(host: str | None) -> bool:
+    """Deliberately an explicit allow-list (Python's is_private also accepts documentation ranges)."""
+    ip = _ip(host)
+    return ip is not None and any(ip in n for n in _LAN_NETS)
 
 
 def is_loopback(host: str | None) -> bool:
-    try:
-        ip = ipaddress.ip_address((host or "").split("%")[0])
-        if ip.version == 6 and ip.ipv4_mapped:
-            ip = ip.ipv4_mapped
-        return ip.is_loopback
-    except ValueError:
-        return False
+    ip = _ip(host)
+    return ip is not None and ip.is_loopback
 
 
 class Auth:
@@ -161,5 +164,3 @@ async def _respond(send, status: int, body: bytes, ctype: str, extra: list | Non
     await send({"type": "http.response.body", "body": body})
 
 
-def parse_query(scope) -> dict[str, str]:
-    return {k: v[0] for k, v in parse_qs(scope.get("query_string", b"").decode()).items()}

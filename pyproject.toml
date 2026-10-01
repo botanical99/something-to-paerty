@@ -1,0 +1,23 @@
+[tool.ruff]
+line-length = 130
+target-version = "py311"
+extend-exclude = ["hardware/probe_*.py", "hardware/tuya_ble_direct.py", "discover.py", "tools", "reports", ".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = ["E701", "E702", "E741", "B008", "UP037", "UP006", "UP007", "UP035", "UP045", "I001", "B904", "UP040"]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+check_untyped_defs = false
+warn_unused_ignores = false
+exclude = ["tools/", "reports/", "hardware/probe_", "hardware/tuya_ble_direct.py", "discover.py", "\\.venv/", "tests/"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+markers = [
+  "endurance: long simulated sessions (30 virtual minutes) - SIMULATOR VERIFIED",
+  "e2e: browser UI smoke tests (needs playwright + chromium)",
+]

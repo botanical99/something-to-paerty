@@ -1,12 +1,13 @@
-# Phase 1 / 2 (discovery + control tests)
-bleak>=3.0
-tinytuya>=1.20
+# --- runtime ---
+fastapi>=0.110
+uvicorn[standard]>=0.29
+numpy>=1.26
+sounddevice>=0.4            # optional: microphone / Stereo Mix input (the demo track works without it)
+tinytuya>=1.20              # real gateway LAN control (not needed with --simulate)
 python-dotenv>=1.0
-tuya-device-sharing-sdk      # one-time QR login (no developer account); tools/tuya_login.py
-qrcode[pil]                  # renders that QR
-cryptography                 # AES for the direct-BLE client
+qrcode[pil]                 # pairing QR code
 
-# Added in later phases (not needed yet):
-# fastapi, uvicorn[standard]   -> Phase 5 web app
-# numpy, sounddevice           -> Phase 4 audio analysis
-# pyyaml                       -> Phase 3 fixture/scene config
+# --- one-time Tuya login helpers (tools/tuya_login.py) and discovery probes ---
+bleak>=3.0
+tuya-device-sharing-sdk
+cryptography

@@ -285,11 +285,11 @@ class LightingController:
         """After (re)connect: learn the lamps' real state, then re-assert anything we still owe them."""
         try:
             owed = {c: dict(d) for c, d in self.sched.desired.items()}
-            await self.sched.adopt_from_gateway()
+            await self.sched.adopt_from_gateway()          # takes a second or two: the user may act meanwhile
             if self.mode in ("effect", "music"):
                 pass                                       # the running effect keeps driving
-            elif owed and self.sched.pending:
-                self.sched.reassert()
+            elif self.sched.pending or self.sched.desired != owed:
+                self.sched.reassert()                      # something was asked of the lamps: it still stands
             else:
                 self.sched.adopt_known_as_desired()
         except Exception as e:  # noqa: BLE001

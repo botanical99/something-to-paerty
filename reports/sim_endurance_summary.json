@@ -1,0 +1,50 @@
+{
+  "party_30_min": {
+    "elapsed": 1800.0,
+    "rate": 2.592,
+    "rejected": 0,
+    "busiest": 5,
+    "queue": 6,
+    "reconnects": 1,
+    "failed": 2,
+    "mode": "idle",
+    "err": "",
+    "sent": 4665,
+    "restored_on_state": true,
+    "tasks_min_max": [
+      7,
+      8
+    ],
+    "source": "SIMULATOR VERIFIED (virtual time) - not real hardware"
+  },
+  "music_30_min": {
+    "elapsed": 1810.1,
+    "rate": 1.717,
+    "rejected": 0,
+    "busiest": 5,
+    "queue": 12,
+    "mq": 0,
+    "reconnects": 1,
+    "frames": 77955,
+    "stats": {
+      "events": 12794,
+      "dropped": 0,
+      "stale": 0,
+      "cues": 299,
+      "skipped": 81,
+      "budget_spent": 3137.0,
+      "audio_fps": 43.1
+    },
+    "err": "",
+    "cal": "ok",
+    "sent": 3108,
+    "bpm": 123.4,
+    "beats": 2794,
+    "restored": true,
+    "tasks_min_max": [
+      9,
+      10
+    ],
+    "source": "SIMULATOR VERIFIED (virtual time) - not real hardware"
+  }
+}
