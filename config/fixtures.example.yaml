@@ -1,0 +1,13 @@
+# DESIGN SKETCH for Phase 3 — not loaded by anything yet, not verified on hardware.
+# Copy to fixtures.yaml (git-ignored) once real fixture IDs are known from discovery.
+transport: tuya_gateway        # or: ble_mesh, simulator
+room: Bedroom
+tracks:
+  - name: TRACK A
+    order: [A1, A2, A3, A4, A5]   # physical order, used by chase/wave direction
+  - name: TRACK B
+    order: [B1, B2, B3, B4]
+lights:
+  A1: { name: "Track A 1", type: spot, cid: "REPLACE_ME", dp: { on: 1, brightness: 3, cct: 4 } }
+zones:
+  perimeter: [A1, A5, B1, B4]

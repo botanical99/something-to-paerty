@@ -1,0 +1,22 @@
+{
+  "_note": "Editable room topology. 'light' refers to the L1-L6 ids in config/tuya_fixtures.json (identified by blink test). Tracks are listed bed -> door. 'ring' is the CHASE order. 'pairs' are the mirrored pairs.",
+  "gateway": {"ip": "192.168.100.171", "version": 3.3},
+  "fixtures": {
+    "R1":   {"light": "L5", "label": "Right bed spot",    "kind": "spot"},
+    "R2":   {"light": "L1", "label": "Right long light",  "kind": "linear"},
+    "R3":   {"light": "L3", "label": "Right door spot",   "kind": "spot"},
+    "LFT1": {"light": "L6", "label": "Left bed spot",     "kind": "spot"},
+    "LFT2": {"light": "L2", "label": "Left long light",   "kind": "linear"},
+    "LFT3": {"light": "L4", "label": "Left door spot",    "kind": "spot"}
+  },
+  "tracks": {
+    "RIGHT": ["R1", "R2", "R3"],
+    "LEFT":  ["LFT1", "LFT2", "LFT3"]
+  },
+  "ring": ["R1", "R2", "R3", "LFT3", "LFT2", "LFT1"],
+  "pairs": {
+    "bed":    ["R1", "LFT1"],
+    "middle": ["R2", "LFT2"],
+    "door":   ["R3", "LFT3"]
+  }
+}

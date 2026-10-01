@@ -1,0 +1,11 @@
+{
+  "_note": "PLACEHOLDER ids used by the simulator. The real file is config/tuya_fixtures.json (git-ignored, created by the identify step): L1..L6 -> gateway child node id (cid).",
+  "lights": {
+    "L1": {"cid": "sim-L1"},
+    "L2": {"cid": "sim-L2"},
+    "L3": {"cid": "sim-L3"},
+    "L4": {"cid": "sim-L4"},
+    "L5": {"cid": "sim-L5"},
+    "L6": {"cid": "sim-L6"}
+  }
+}

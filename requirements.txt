@@ -1,0 +1,12 @@
+# Phase 1 / 2 (discovery + control tests)
+bleak>=3.0
+tinytuya>=1.20
+python-dotenv>=1.0
+tuya-device-sharing-sdk      # one-time QR login (no developer account); tools/tuya_login.py
+qrcode[pil]                  # renders that QR
+cryptography                 # AES for the direct-BLE client
+
+# Added in later phases (not needed yet):
+# fastapi, uvicorn[standard]   -> Phase 5 web app
+# numpy, sounddevice           -> Phase 4 audio analysis
+# pyyaml                       -> Phase 3 fixture/scene config

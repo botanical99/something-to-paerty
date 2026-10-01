@@ -1,0 +1,34 @@
+# Secrets / credentials — never commit
+.env
+devices.json
+tinytuya.json
+tuya-raw.json
+snapshot.json
+tuya-mesh*.json
+config/credentials*.json
+
+# Local runtime state
+.venv/
+__pycache__/
+*.pyc
+logs/*
+!logs/.gitkeep
+reports/raw/*
+!reports/raw/.gitkeep
+config/scenes.json
+config/fixtures.yaml
+
+# Tuya login/device data (contains local keys)
+config/tuya_*.json
+!config/tuya_fixtures.example.json
+reports/raw/login_qr.png
+config/ble_map.json
+
+# Runtime state (per machine)
+config/auth.json
+config/settings.json
+config/music_calibration.json
+config/runtime_state.json
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
