@@ -1,0 +1,11 @@
+{
+  "_note": "Optional. Copy to settings.json (git-ignored). Environment variables LIGHTS_<NAME> override these.",
+  "port": 8080,
+  "rate": 4.0,
+  "music_budget": 3.0,
+  "require_pin": true,
+  "trust_localhost": true,
+  "lan_only": true,
+  "open_browser": true,
+  "simulate": false
+}

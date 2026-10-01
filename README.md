@@ -10,7 +10,7 @@ beats / drops / energy, scenes you can edit, a built-in simulator, and a PIN-pai
 
 1. Keep your secret config in `config\` (`tuya_devices.json`, `tuya_fixtures.json`, … — they are git-ignored and never uploaded).
 2. Double-click **`START_LIGHTS.bat`**. A page opens with a QR code.
-3. Scan the QR code with the iPhone camera (same Wi-Fi) → Share → *Add to Home Screen*.
+3. Scan the QR code with the iPhone camera (same Wi-Fi) → Share → *Add to Home Screen*. (iOS keeps a Home-Screen app's storage separate from Safari, so open the new icon once and type the 6-digit PIN shown on the laptop / in Status.)
 4. **`STOP_LIGHTS.bat`** (or Ctrl+C in the window) stops everything and restores the room.
 
 First time only: run **`ALLOW_PHONE_ACCESS.bat`** as Administrator so Windows Firewall lets your phone in (private networks only).

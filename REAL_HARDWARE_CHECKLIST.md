@@ -36,7 +36,7 @@ Only the things a simulator cannot know are listed. Tick each box; write a note 
 - [ ] Try sensitivity low/high and note a good default for your room: ________
 
 ## 6 · Phone (5 min)
-- [ ] iPhone: scan the QR code (or enter the PIN) → UI loads, pairs; Share → *Add to Home Screen* → opens full screen.
+- [ ] iPhone: scan the QR code (or enter the PIN) → UI loads, pairs; Share → *Add to Home Screen* → open the new icon, enter the PIN once (iOS gives the Home-Screen app its own storage) → full screen.
 - [ ] Sliders feel responsive; lock the phone for a minute, unlock: it reconnects by itself (no stale screen).
 - [ ] A phone that is **not** paired (or a PIN typed wrong 5×) is refused / locked out.
 

@@ -1,5 +1,8 @@
 # HARDWARE_DISCOVERY.md — rev 3 (2026-10-01)
 
+> **Status note:** this file records what was measured on the real hardware and is still the reference for it. The controller described in
+> its last section ("Suggested next step") has since been built — see [README.md](README.md) and [REAL_HARDWARE_CHECKLIST.md](REAL_HARDWARE_CHECKLIST.md).
+
 **Legend:** ✅ **VERIFIED on your real hardware** (measured/observed, and for visible effects, confirmed by you) · 👁 confirmed by your eyes · ⚠️ assumption / not yet verified · 📚 third-party claim.
 No light, gateway or account was reset, unbound, re-paired, provisioned or updated. Every lamp I touched was restored to its previous state and read back.
 
