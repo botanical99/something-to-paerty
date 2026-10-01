@@ -67,9 +67,15 @@ class Layout:
             raise ValueError(f"layout ring is missing fixtures: {sorted(missing)}")
 
     @classmethod
-    def load(cls, path: Path | None = None) -> "Layout":
-        data = json.loads((path or CONFIG / "layout.json").read_text(encoding="utf-8"))
-        fx = json.loads((CONFIG / "tuya_fixtures.json").read_text(encoding="utf-8"))
+    def load(cls, config_dir: Path | None = None, simulate: bool = False) -> "Layout":
+        """Topology from layout.json; lamp ids from tuya_fixtures.json (git-ignored, real hardware only).
+        In simulate mode the placeholder ids of tuya_fixtures.example.json are used instead."""
+        cdir = Path(config_dir) if config_dir else CONFIG
+        data = json.loads((cdir / "layout.json").read_text(encoding="utf-8"))
+        fx_file = cdir / ("tuya_fixtures.example.json" if simulate else "tuya_fixtures.json")
+        if not fx_file.exists():
+            raise FileNotFoundError(f"{fx_file} is missing - run the identify step, or start in simulator mode")
+        fx = json.loads(fx_file.read_text(encoding="utf-8"))
         cids = {k: v["cid"] for k, v in fx["lights"].items()}
         return cls(data, cids)
 

@@ -17,6 +17,7 @@ from core.model import CONFIG
 
 log = logging.getLogger("scenes")
 FILE = CONFIG / "scenes.json"
+BUILTIN_ORDER = ["NORMAL", "CHILL", "CINEMA", "PARTY", "MUSIC", "ALL ON", "ALL OFF"]
 
 DEFAULT_SCENES: dict[str, dict] = {
     "NORMAL": {"kind": "static", "label": "Normal", "all": {"level": 35, "cct": 0.45}, "fixtures": {}},
@@ -32,11 +33,12 @@ DEFAULT_SCENES: dict[str, dict] = {
 
 
 class SceneStore:
-    def __init__(self):
+    def __init__(self, path: Path | None = None):
+        self.file = Path(path) if path else FILE
         self.scenes = copy.deepcopy(DEFAULT_SCENES)
-        if FILE.exists():
+        if self.file.exists():
             try:
-                saved = json.loads(FILE.read_text(encoding="utf-8"))
+                saved = json.loads(self.file.read_text(encoding="utf-8"))
                 for k, v in saved.items():
                     self.scenes[k] = v
             except Exception as e:  # noqa: BLE001
@@ -46,7 +48,8 @@ class SceneStore:
         return self.scenes[name]
 
     def save(self) -> None:
-        FILE.write_text(json.dumps(self.scenes, indent=2), encoding="utf-8")
+        self.file.parent.mkdir(parents=True, exist_ok=True)
+        self.file.write_text(json.dumps(self.scenes, indent=2), encoding="utf-8")
 
     def put(self, name: str, scene: dict) -> None:
         self.scenes[name] = scene
@@ -56,6 +59,17 @@ class SceneStore:
         if name in DEFAULT_SCENES:
             self.scenes[name] = copy.deepcopy(DEFAULT_SCENES[name])
             self.save()
+
+    def delete(self, name: str) -> bool:
+        """Built-in scenes can be edited/reset but not deleted."""
+        if name in DEFAULT_SCENES or name not in self.scenes:
+            return False
+        del self.scenes[name]
+        self.save()
+        return True
+
+    def order(self) -> list[str]:
+        return [n for n in BUILTIN_ORDER if n in self.scenes] + [n for n in self.scenes if n not in BUILTIN_ORDER]
 
     def public(self) -> dict:
         return self.scenes

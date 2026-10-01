@@ -1,10 +1,18 @@
-"""Start the local lighting controller.   python run.py   (or double-click START_LIGHTS.bat)"""
+"""Start the local lighting controller.
+
+    python run.py                 real lights (needs config/tuya_devices.json + config/tuya_fixtures.json)
+    python run.py --simulate      simulated gateway + lamps - safe anywhere, nothing touches the network
+
+Double-click START_LIGHTS.bat on Windows. Ctrl+C (or STOP_LIGHTS.bat) stops it and restores the room.
+"""
+from __future__ import annotations
+
+import argparse
 import asyncio
 import ctypes
 import logging
 import logging.handlers
 import os
-import socket
 import sys
 import threading
 from pathlib import Path
@@ -13,87 +21,101 @@ ROOT = Path(__file__).resolve().parent
 os.chdir(ROOT)
 sys.path.insert(0, str(ROOT))
 
-PORT = int(os.getenv("LIGHTS_PORT", "8080"))
+from core.net import lan_ip  # noqa: E402
+from core.settings import Settings  # noqa: E402
 
 
-def lan_ip() -> str:
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    try:
-        s.connect(("10.255.255.255", 1))
-        return s.getsockname()[0]
-    except OSError:
-        return "127.0.0.1"
-    finally:
-        s.close()
-
-
-def setup_logging() -> None:
-    (ROOT / "logs").mkdir(exist_ok=True)
+def setup_logging(log_dir: Path) -> None:
+    log_dir.mkdir(parents=True, exist_ok=True)
     fmt = logging.Formatter("%(asctime)s %(levelname)-7s %(name)s: %(message)s", "%H:%M:%S")
-    fh = logging.handlers.RotatingFileHandler(ROOT / "logs" / "lights.log", maxBytes=2_000_000, backupCount=3, encoding="utf-8")
+    fh = logging.handlers.RotatingFileHandler(log_dir / "lights.log", maxBytes=2_000_000, backupCount=3, encoding="utf-8")
     fh.setFormatter(fmt)
     ch = logging.StreamHandler()
     ch.setFormatter(fmt)
     ch.setLevel(logging.INFO)
-    logging.basicConfig(level=logging.INFO, handlers=[fh, ch])
-    for noisy in ("uvicorn.access", "tinytuya", "asyncio"):
+    logging.basicConfig(level=logging.INFO, handlers=[fh, ch], force=True)
+    for noisy in ("uvicorn.access", "tinytuya", "asyncio", "multipart", "httpx"):
         logging.getLogger(noisy).setLevel(logging.WARNING)
 
 
-def banner(url: str) -> None:
-    print("\n" + "=" * 62)
-    print("  ROOM LIGHTS controller")
-    print(f"  This laptop :  http://localhost:{PORT}")
-    print(f"  iPhone/iPad :  {url}      (same Wi-Fi)")
-    print("=" * 62)
+def banner(s: Settings, pin: str | None) -> None:
+    ip = lan_ip()
+    url = f"http://{ip}:{s.port}"
+    pair = f"{url}/pair?code={pin}" if (pin and s.require_pin) else url
+    print("\n" + "=" * 64)
+    print("  ROOM LIGHTS controller" + ("   *** SIMULATOR - not real lights ***" if s.simulate else ""))
+    print(f"  This laptop :  http://localhost:{s.port}")
+    print(f"  iPhone/iPad :  {url}     (same Wi-Fi)")
+    if pin and s.require_pin:
+        print(f"  Pairing PIN :  {pin}   (or just scan the QR code below)")
+    print("=" * 64)
     try:
         import qrcode
         qr = qrcode.QRCode(border=1)
-        qr.add_data(url)
+        qr.add_data(pair)
         qr.print_ascii(invert=True)
     except Exception:  # noqa: BLE001
         pass
-    print("  Ctrl+C here to stop. The room is restored on exit.\n")
+    print("  Ctrl+C here (or STOP_LIGHTS.bat) stops it. The room is restored on exit.\n")
 
 
-def install_close_handler(loop_holder: dict) -> None:
-    """Best effort: closing the console window should still restore the room."""
+def install_close_handler(holder: dict) -> None:
+    """Windows: closing the console window should still restore the room."""
     if os.name != "nt":
         return
-    HANDLER = ctypes.WINFUNCTYPE(ctypes.c_int, ctypes.c_uint)
+    handler_t = ctypes.WINFUNCTYPE(ctypes.c_int, ctypes.c_uint)
 
-    @HANDLER
+    @handler_t
     def handler(event):  # CTRL_CLOSE_EVENT=2, LOGOFF=5, SHUTDOWN=6
         if event in (2, 5, 6):
             try:
-                from api import server
-                loop = loop_holder.get("loop")
-                if loop and server.rt:
-                    asyncio.run_coroutine_threadsafe(server.rt.shutdown(), loop).result(timeout=4)
+                loop, app = holder.get("loop"), holder.get("app")
+                rt = getattr(app.state, "rt", None) if app else None
+                if loop and rt:
+                    asyncio.run_coroutine_threadsafe(rt.shutdown(), loop).result(timeout=4)
             except Exception:  # noqa: BLE001
                 pass
         return 0
 
-    loop_holder["h"] = handler  # keep a reference
-    ctypes.windll.kernel32.SetConsoleCtrlHandler(handler, True)
+    holder["h"] = handler  # keep a reference alive
+    ctypes.windll.kernel32.SetConsoleCtrlHandler(handler, True)  # type: ignore[attr-defined]
 
 
-def main() -> None:
-    setup_logging()
+def main(argv: list[str] | None = None) -> None:
+    ap = argparse.ArgumentParser(description="Room lights controller")
+    ap.add_argument("--simulate", action="store_true", help="use the built-in simulator instead of the real gateway")
+    ap.add_argument("--port", type=int)
+    ap.add_argument("--no-browser", action="store_true")
+    a = ap.parse_args(argv)
+
+    settings = Settings.load(simulate=True if a.simulate else None, port=a.port,
+                             open_browser=False if a.no_browser else None)
+    setup_logging(settings.log_dir)
     import uvicorn
 
-    url = f"http://{lan_ip()}:{PORT}"
-    banner(url)
-    holder: dict = {}
+    from api.server import create_app
+
+    app = create_app(settings)
+    banner(settings, app.state.auth.pin)
+    holder: dict = {"app": app}
     install_close_handler(holder)
 
-    config = uvicorn.Config("api.server:app", host="0.0.0.0", port=PORT, log_level="warning")
-    server = uvicorn.Server(config)
+    server = uvicorn.Server(uvicorn.Config(app, host=settings.host, port=settings.port, log_level="warning"))
 
-    async def serve():
+    async def serve() -> None:
         holder["loop"] = asyncio.get_running_loop()
-        if os.getenv("LIGHTS_NO_BROWSER") != "1":
-            threading.Timer(2.0, lambda: os.startfile(f"http://localhost:{PORT}")).start()
+
+        async def wire_exit() -> None:
+            for _ in range(100):                              # runtime exists once the lifespan has started
+                rt = getattr(app.state, "rt", None)
+                if rt is not None:
+                    rt.on_exit_request = lambda: setattr(server, "should_exit", True)
+                    return
+                await asyncio.sleep(0.1)
+
+        asyncio.get_running_loop().create_task(wire_exit())
+        if settings.open_browser and os.getenv("LIGHTS_NO_BROWSER") != "1" and hasattr(os, "startfile"):
+            threading.Timer(2.0, lambda: os.startfile(f"http://localhost:{settings.port}/connect")).start()  # type: ignore[attr-defined]
         await server.serve()
 
     asyncio.run(serve())

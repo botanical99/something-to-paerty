@@ -10,9 +10,7 @@ import asyncio
 import logging
 import time
 from concurrent.futures import ThreadPoolExecutor
-from typing import Awaitable, Callable
-
-from hardware.tuya_lan import GatewayLan
+from typing import Any, Awaitable, Callable
 
 log = logging.getLogger("link")
 
@@ -24,7 +22,7 @@ class LinkDown(Exception):
 class AsyncGatewayLink:
     def __init__(self, ip: str, version: float = 3.3):
         self.ip, self.version = ip, version
-        self._g: GatewayLan | None = None
+        self._g: Any = None
         self._pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="gateway")
         self.state = "offline"           # offline | connecting | online
         self.online_cids: list[str] = []
@@ -36,6 +34,11 @@ class AsyncGatewayLink:
         self.on_state: Callable[[str], None] | None = None
         self._task: asyncio.Task | None = None
         self._stop = False
+
+    def _make_gateway(self):
+        """Factory hook: the real adapter by default (imported lazily so the simulator never needs tinytuya)."""
+        from hardware.tuya_lan import GatewayLan
+        return GatewayLan(self.ip, self.version)
 
     # -- lifecycle
     def start(self) -> None:
@@ -110,7 +113,7 @@ class AsyncGatewayLink:
         while not self._stop:
             if self.state == "offline":
                 self._set_state("connecting")
-                g = GatewayLan(self.ip, self.version)
+                g = self._make_gateway()
                 try:
                     online = await self._run(g.connect, 1)
                     self._g, self.online_cids = g, online
