@@ -157,11 +157,12 @@ input[type=range].plain { --track: linear-gradient(90deg, var(--accent), var(--a
 
 /* ------------------------------------------------------------------ effect cards */
 .fxgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.fxcard { text-align: left; padding: 13px 14px; border-radius: 18px; border: 1px solid var(--line); background: var(--card); min-height: 86px; transition: border-color 0.2s, background 0.2s; }
+.fxcard { position: relative; text-align: left; padding: 13px 14px; border-radius: 18px; border: 1px solid var(--line); background: var(--card); min-height: 86px; transition: border-color 0.2s, background 0.2s; }
 .fxcard .nm { font-size: 15.5px; font-weight: 720; }
 .fxcard .ds { font-size: 12px; color: var(--muted); margin-top: 4px; line-height: 1.35; }
 .fxcard.on { border-color: var(--accent); background: linear-gradient(160deg, rgba(255, 178, 94, 0.18), rgba(255, 178, 94, 0.04)); }
-.fxcard.live::after { content: "RUNNING"; float: right; font-size: 9.5px; letter-spacing: 0.14em; color: var(--good); font-weight: 800; margin-top: -34px; }
+.fxcard.live::after { content: "RUNNING"; position: absolute; top: 12px; right: 12px; font-size: 9.5px; letter-spacing: 0.14em; color: var(--good); font-weight: 800; }
+.fxcard.live .nm { padding-right: 62px; }
 
 /* ------------------------------------------------------------------ music */
 .viz-card { padding: 14px 14px 10px; }
@@ -222,7 +223,7 @@ pre.logs { margin: 0; max-height: 280px; overflow: auto; font-size: 11px; line-h
 .sheet h2 { font-size: 22px; font-weight: 750; }
 .sheet .sub { margin-bottom: 8px; }
 .swatch { width: 54px; height: 54px; border-radius: 18px; flex: 0 0 auto; box-shadow: 0 0 30px var(--sw, #fff3), inset 0 0 0 1px rgba(255,255,255,0.15); background: var(--sw, #333); }
-.toast { position: fixed; left: 50%; bottom: calc(var(--tab-h) + var(--safe-b) + 18px); transform: translate(-50%, 30px); opacity: 0; background: #20263a; border: 1px solid var(--line); padding: 12px 18px; border-radius: 16px; font-size: 14px; font-weight: 600; z-index: 60; transition: all 0.28s; max-width: 90vw; text-align: center; pointer-events: none; }
+.toast { position: fixed; left: 50%; bottom: calc(var(--tab-h) + var(--safe-b) + 92px); transform: translate(-50%, 30px); opacity: 0; background: #20263a; border: 1px solid var(--line); padding: 12px 18px; border-radius: 16px; font-size: 14px; font-weight: 600; z-index: 60; transition: all 0.28s; max-width: 90vw; text-align: center; pointer-events: none; }
 .toast.show { transform: translate(-50%, 0); opacity: 1; }
 .toast.err { border-color: rgba(255, 107, 107, 0.5); color: #ffb0b0; }
 

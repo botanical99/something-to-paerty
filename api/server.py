@@ -153,7 +153,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         finally:
             await rt.shutdown()
 
-    app = FastAPI(title="Room lights", version=VERSION, lifespan=lifespan)
+    app = FastAPI(title="Room lights", version=VERSION, lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.auth = auth
     app.state.settings = settings
     app.add_middleware(AuthMiddleware, auth=auth)

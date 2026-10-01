@@ -17,6 +17,7 @@ import secrets
 import time
 from http.cookies import SimpleCookie
 from pathlib import Path
+from urllib.parse import urlsplit
 
 COOKIE = "lights_session"
 MAX_FAILS, LOCK_S = 5, 60.0
@@ -26,6 +27,17 @@ OPEN_PATHS = ("/login", "/api/login", "/pair", "/static/", "/manifest.webmanifes
 _LAN_NETS = [ipaddress.ip_network(n) for n in (
     "127.0.0.0/8", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "169.254.0.0/16",   # IPv4 loopback / private / link-local
     "::1/128", "fc00::/7", "fe80::/10")]                                                 # IPv6 loopback / ULA / link-local
+
+
+def host_header_ok(value: str) -> bool:
+    """Accept IP literals, 'localhost' and single-label / .local / .lan names; refuse anything that looks like a public DNS name."""
+    if not value:
+        return True                                  # HTTP/1.0 style clients and the test client send none
+    h = value.strip().lower()
+    h = h[1:h.index("]")] if h.startswith("[") and "]" in h else h.rsplit(":", 1)[0] if h.count(":") == 1 else h
+    if _ip(h) is not None or h == "localhost":
+        return True
+    return "." not in h or h.endswith((".local", ".lan", ".home", ".localdomain"))
 
 
 def _ip(host: str | None):
@@ -108,10 +120,18 @@ class Auth:
         self._fails.pop(ip, None)
 
     # ---- decisions for the ASGI middleware
-    def decide(self, host: str | None, path: str, headers: dict[str, str]) -> str:
+    def decide(self, host: str | None, path: str, headers: dict[str, str], method: str = "GET") -> str:
         """-> 'ok' | 'forbidden' | 'login' (pairing needed)"""
         if self.lan_only and not is_lan_address(host):
             return "forbidden"
+        if not host_header_ok(headers.get("host", "")):
+            return "forbidden"                      # DNS-rebinding defence: only IPs / localhost / .local names
+        if method in ("POST", "PUT", "DELETE", "PATCH"):
+            origin = headers.get("origin")
+            if origin and origin != "null" and urlsplit(origin).netloc != headers.get("host", ""):
+                return "forbidden"                  # another website is trying to drive the lights (CSRF)
+            if origin == "null":
+                return "forbidden"
         if any(path == p or (p.endswith("/") and path.startswith(p)) for p in OPEN_PATHS):
             return "ok"
         if not self.require_pin:
@@ -143,7 +163,7 @@ class AuthMiddleware:
         host = client[0] if client else None
         headers = {k.decode("latin-1").lower(): v.decode("latin-1") for k, v in scope.get("headers", [])}
         path = scope.get("path", "/")
-        verdict = self.auth.decide(host, path, headers)
+        verdict = self.auth.decide(host, path, headers, scope.get("method", "GET"))
         if verdict == "ok":
             return await self.app(scope, receive, send)
         if scope["type"] == "websocket":

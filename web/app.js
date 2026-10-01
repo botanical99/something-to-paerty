@@ -79,6 +79,16 @@ function cctRGB(c) {
 const rgb = (a, al = 1) => `rgba(${a[0]},${a[1]},${a[2]},${al})`;
 const pct = (v) => Math.round(v) + "%";
 
+// two-tap confirmation instead of a browser confirm() dialog
+function confirmTap(btn, armedLabel, action) {
+  const label = btn.textContent;
+  btn.onclick = () => {
+    if (btn.dataset.armed) { clearTimeout(btn._t); btn.dataset.armed = ""; btn.textContent = label; action(); return; }
+    btn.dataset.armed = "1"; btn.textContent = armedLabel;
+    btn._t = setTimeout(() => { btn.dataset.armed = ""; btn.textContent = label; }, 3500);
+  };
+}
+
 // ----------------------------------------------------------------------------- navigation
 function show(v) {
   view = v;
@@ -533,10 +543,12 @@ function drawViz() {
   // beat orb
   const cx = w - (w - (x0 + 4 * (bw + gap))) / 2, cy = h / 2 - 6, r0 = Math.min(46, (w - (x0 + 4 * (bw + gap))) / 2 - 8);
   const r = r0 * (0.55 + 0.35 * viz.v.energy + 0.25 * viz.pulse);
+  c.globalAlpha = running ? 1 : 0.35;
   const rg = c.createRadialGradient(cx, cy, 0, cx, cy, r * 2.2);
   rg.addColorStop(0, rgb(col, 0.9)); rg.addColorStop(0.35, rgb(col, 0.35)); rg.addColorStop(1, rgb(col, 0));
   c.fillStyle = rg; c.beginPath(); c.arc(cx, cy, r * 2.2, 0, 7); c.fill();
   c.fillStyle = rgb(col, 0.95); c.beginPath(); c.arc(cx, cy, r, 0, 7); c.fill();
+  c.globalAlpha = 1;
   if (!running) { c.fillStyle = "rgba(255,255,255,0.35)"; c.font = "600 12px -apple-system, sans-serif"; c.textAlign = "center"; c.fillText("Not listening", cx, cy + r0 + 22); }
 }
 function roundRect(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
@@ -567,11 +579,17 @@ function renderScenes() {
   $$("[data-apply]").forEach((b) => (b.onclick = () => applyScene(b.dataset.apply)));
   $$("[data-edit]").forEach((b) => (b.onclick = () => openSceneEditor(b.dataset.edit)));
 }
-$("#sceneNew").onclick = async () => {
-  const name = (prompt("Name for the new scene", "My scene") || "").trim();
-  if (!name) return;
-  const r = await post("/api/scenes/" + encodeURIComponent(name) + "/save-current");
-  if (r) { await reloadMeta(); renderScenes(); openSceneEditor(name); }
+$("#sceneNew").onclick = () => {
+  openSheet(`<h2>New scene</h2><p class="sub">Captures the room exactly as it looks right now. You can fine-tune it afterwards.</p>
+    <input class="txt" id="newName" maxlength="30" placeholder="Name, e.g. Reading" autocomplete="off" autocapitalize="words">
+    <div class="btns" style="margin-top:16px"><button class="btn primary" id="newGo">Create</button><button class="btn" id="newCancel">Cancel</button></div>`);
+  $("#newCancel").onclick = closeSheet;
+  $("#newGo").onclick = async () => {
+    const name = $("#newName").value.trim();
+    if (!name) { toast("Give it a name first", true); return; }
+    const r = await post("/api/scenes/" + encodeURIComponent(name) + "/save-current");
+    if (r) { await reloadMeta(); renderScenes(); openSceneEditor(name); }
+  };
 };
 async function reloadMeta() { const m = await api("GET", "/api/meta"); if (m) { M = m; buildScenes(); } }
 
@@ -609,7 +627,7 @@ function openSceneEditor(name) {
   $("#seClose").onclick = closeSheet;
   $("#seSave").onclick = async () => { const r = await saveScene(true); if (r) closeSheet(); };
   if ($("#seReset")) $("#seReset").onclick = async () => { await post("/api/scenes/" + encodeURIComponent(name) + "/reset"); await reloadMeta(); renderScenes(); closeSheet(); toast("Reset"); };
-  if ($("#seDelete")) $("#seDelete").onclick = async () => { if (!confirm("Delete this scene?")) return; const r = await api("DELETE", "/api/scenes/" + encodeURIComponent(name)); if (r) { await reloadMeta(); renderScenes(); closeSheet(); } };
+  if ($("#seDelete")) confirmTap($("#seDelete"), "Tap again to delete", async () => { const r = await api("DELETE", "/api/scenes/" + encodeURIComponent(name)); if (r) { await reloadMeta(); renderScenes(); closeSheet(); } });
 }
 function wireSceneEditor() {
   const { sc } = sheetScene;
@@ -700,8 +718,8 @@ async function loadStatusExtras() {
   }
   if (logs) { const el = $("#logs"); el.textContent = logs.lines.join("\n"); el.scrollTop = el.scrollHeight; }
 }
-$("#btnRotate").onclick = async () => { if (!confirm("Create a new PIN? Every paired phone will need to pair again (this one stays signed in only if it re-pairs).")) return; const r = await post("/api/auth/rotate"); if (r) { toast("New PIN " + r.pin); loadStatusExtras(); } };
-$("#btnQuit").onclick = async () => { if (!confirm("Stop the controller? The room is restored first.")) return; await post("/api/shutdown"); toast("Stopping…"); };
+confirmTap($("#btnRotate"), "Tap again: sign out every phone", async () => { const r = await post("/api/auth/rotate"); if (r) { toast("New PIN " + r.pin); loadStatusExtras(); } });
+confirmTap($("#btnQuit"), "Tap again to stop the controller", async () => { await post("/api/shutdown"); toast("Stopping — the room is being restored"); });
 
 // ----------------------------------------------------------------------------- render + websocket
 function render() {

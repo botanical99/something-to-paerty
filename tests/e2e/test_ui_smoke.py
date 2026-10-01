@@ -196,8 +196,10 @@ def test_music_calibration_flow(page):
 
 def test_scene_editor_saves_a_custom_scene(page):
     tab(page, "scenes")
-    page.once("dialog", lambda d: d.accept("Reading"))
     page.click("#sceneNew")
+    page.wait_for_selector("#sheet.show #newName")
+    page.fill("#newName", "Reading")
+    page.click("#newGo")
     page.wait_for_selector("#sheet.show #seAllBri")
     page.fill("#seAllBri", "55")
     page.dispatch_event("#seAllBri", "input")
@@ -206,9 +208,10 @@ def test_scene_editor_saves_a_custom_scene(page):
     page.wait_for_selector("#sheet:not(.show)")
     page.wait_for_function("[...document.querySelectorAll('#sceneList .tx b')].some(b => b.textContent === 'Reading')")
     # clean up
-    page.once("dialog", lambda d: d.accept())
     page.click('[data-edit="Reading"]')
     page.wait_for_selector("#sheet.show #seDelete")
+    page.click("#seDelete")                          # first tap only arms it
+    assert "again" in page.inner_text("#seDelete")
     page.click("#seDelete")
     page.wait_for_selector("#sheet:not(.show)")
     tab(page, "home")

@@ -109,3 +109,26 @@ def test_pin_persists_across_restarts_and_never_in_git(cfg, tmp_path):
 def test_pin_can_be_disabled_for_lan(cfg):
     with client_for(cfg, "192.168.1.80", require_pin=False) as c:
         assert c.get("/api/state").status_code == 200
+
+
+def test_cross_site_posts_and_dns_rebinding_are_refused(cfg):
+    with client_for(cfg, "127.0.0.1") as c:                               # even the trusted laptop
+        ok = {"host": "localhost:8080"}
+        assert c.post("/api/normal", headers=ok).status_code == 200
+        assert c.post("/api/normal", headers={**ok, "origin": "http://localhost:8080"}).status_code == 200
+        assert c.post("/api/normal", headers={**ok, "origin": "https://evil.example"}).status_code == 403
+        assert c.post("/api/normal", headers={**ok, "origin": "null"}).status_code == 403
+        assert c.delete("/api/scenes/x", headers={**ok, "origin": "http://attacker.test"}).status_code == 403
+        assert c.get("/api/state", headers={"host": "rebind.attacker.com"}).status_code == 403   # DNS rebinding
+        assert c.get("/api/state", headers={"host": "192.168.1.5:8080"}).status_code == 200
+        assert c.get("/api/state", headers={"host": "my-laptop.local:8080"}).status_code == 200
+        assert c.get("/api/state", headers={"host": "my-laptop:8080"}).status_code == 200
+        assert c.get("/docs").status_code in (404, 401)                  # no interactive API explorer
+
+
+def test_host_header_rules():
+    from api.auth import host_header_ok
+    for good in ("localhost:8080", "127.0.0.1:8080", "192.168.1.9", "[::1]:8080", "pc.local", "bedroom", ""):
+        assert host_header_ok(good), good
+    for bad in ("evil.com", "a.b.example.org:8080", "1.2.3.4.nip.io"):
+        assert not host_header_ok(bad), bad

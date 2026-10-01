@@ -120,6 +120,7 @@ class LightingController:
         await self._cancel_runner(Prio.HIGH)
         self.snapshot = None
         self._write_state_file(None)
+        log.info("NORMAL (cancels %s)", self.mode)
         self._apply_static(self.scenes.get("NORMAL"), Prio.CRITICAL)
         self.mode, self.name, self.params, self.scene = "scene", "NORMAL", {}, "NORMAL"
         self._sync_master_from_scene(self.scenes.get("NORMAL"))
@@ -137,6 +138,7 @@ class LightingController:
         await self._cancel_runner()
         self.snapshot = None
         self._write_state_file(None)
+        log.info("scene %s", name)
         self._apply_static(sc, Prio.HIGH)
         self.mode, self.name, self.params, self.scene = "scene", name, {}, name
         self._sync_master_from_scene(sc)
@@ -157,6 +159,7 @@ class LightingController:
         await self._cancel_runner()
         epoch = self.sched.epoch
         self.params = {**effect_defaults(name), **sanitize(params, set(self.layout.fixtures))}
+        log.info("effect %s %s", name, {k: v for k, v in self.params.items() if k in ("speed", "intensity", "direction")})
         self.mode, self.name, self.scene = "effect", name, scene_name or ""
         ctx = EffectContext(self.layout, self.sched, epoch, self.params)
         self._task = asyncio.get_running_loop().create_task(self._run_effect(name, ctx), name=f"effect-{name}")
@@ -205,6 +208,8 @@ class LightingController:
     # ------------------------------------------------------------------ stop / manual
     async def stop(self, restore: bool = True) -> None:
         was_anim = self.mode in ("effect", "music")
+        if was_anim:
+            log.info("stop %s (restore=%s)", self.mode, restore)
         await self._cancel_runner()
         self.scene = ""
         if restore and was_anim and self.snapshot:
