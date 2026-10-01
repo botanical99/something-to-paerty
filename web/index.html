@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Room Lights</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#07090e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Lights">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="icon" href="/icons/icon-192.png">
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<div id="app">
+  <header class="topbar">
+    <div class="brand"><b>Room</b> Lights</div>
+    <div class="pills">
+      <span class="pill sim" id="simPill" hidden>Simulator</span>
+      <span class="pill wait" id="linkPill"><i class="dot"></i><span id="linkTxt">Connecting</span></span>
+    </div>
+  </header>
+
+  <!-- ============================== HOME ============================== -->
+  <section id="v-home" class="view active">
+    <div id="banners"></div>
+    <div class="card room-card">
+      <svg id="room" class="room" viewBox="0 0 340 290" aria-label="Room view"></svg>
+    </div>
+    <div id="runBar"></div>
+
+    <div class="sec">Scenes</div>
+    <div class="scene-grid" id="sceneMain"></div>
+    <div class="sec">More</div>
+    <div class="chips" id="sceneMore"></div>
+
+    <div class="sec">All lights</div>
+    <div class="card">
+      <div class="ctl">
+        <div class="row"><span class="lbl">Brightness</span><span class="val" id="masterBriV">–</span></div>
+        <input type="range" class="bri" id="masterBri" min="0" max="100" step="1" value="35" aria-label="Brightness">
+      </div>
+      <div class="ctl">
+        <div class="row"><span class="lbl">Colour temperature</span><span class="val" id="masterCctV">–</span></div>
+        <input type="range" class="cct" id="masterCct" min="0" max="100" step="1" value="45" aria-label="Colour temperature">
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== PARTY ============================== -->
+  <section id="v-party" class="view">
+    <h1 class="title">Party</h1>
+    <p class="sub">Pick a pattern, tune it live, and Stop &amp; restore puts the room back exactly as it was.</p>
+    <div class="fxgrid" id="fxGrid"></div>
+
+    <div class="sec">Feel</div>
+    <div class="card">
+      <div class="ctl"><div class="row"><span class="lbl">Speed</span><span class="val" id="pSpeedV"></span></div>
+        <input type="range" class="plain" id="pSpeed" min="0" max="100" aria-label="Speed"></div>
+      <div class="ctl"><div class="row"><span class="lbl">Intensity</span><span class="val" id="pIntV"></span></div>
+        <input type="range" class="plain" id="pInt" min="0" max="100" aria-label="Intensity"></div>
+      <div class="ctl"><div class="row" style="margin-bottom:10px"><span class="lbl">Direction</span></div>
+        <div class="seg" id="pDir"></div></div>
+      <div class="ctl" id="pPatternWrap" hidden><div class="row" style="margin-bottom:10px"><span class="lbl">Alternate</span></div>
+        <div class="seg" id="pPattern"></div></div>
+    </div>
+
+    <div class="sec">Light</div>
+    <div class="card">
+      <div class="ctl"><div class="row"><span class="lbl">Peak brightness</span><span class="val" id="pMaxV"></span></div>
+        <input type="range" class="bri" id="pMax" min="5" max="100" aria-label="Peak brightness"></div>
+      <div class="ctl"><div class="row"><span class="lbl">Base glow</span><span class="val" id="pMinV"></span></div>
+        <input type="range" class="bri" id="pMin" min="0" max="60" aria-label="Base glow"></div>
+      <div class="ctl"><div class="row"><span class="lbl">Colour range</span><span class="val" id="pCctV"></span></div>
+        <div class="dual" id="pCctDual"><div class="trk"></div><div class="sel" id="pCctSel"></div>
+          <input type="range" id="pCctA" min="0" max="100" aria-label="Warmest colour">
+          <input type="range" id="pCctB" min="0" max="100" aria-label="Coolest colour"></div>
+        <div class="row" style="font-size:11px;color:var(--faint);margin-top:-4px"><span>WARM</span><span>COOL</span></div></div>
+    </div>
+    <div class="row" style="margin:14px 2px 0"><span class="sub" style="margin:0" id="pHint"></span>
+      <button class="btn small" id="pSaveScene">Save as PARTY scene</button></div>
+    <div class="sticky-actions"><div class="btns" id="pActions"></div></div>
+  </section>
+
+  <!-- ============================== MUSIC ============================== -->
+  <section id="v-music" class="view">
+    <h1 class="title">Music</h1>
+    <p class="sub">The lights listen and dance within what the gateway can deliver — about four commands a second.</p>
+    <div class="card viz-card">
+      <canvas id="viz" aria-label="Live audio"></canvas>
+      <div class="vizstats">
+        <div class="bpm"><span id="mBpm">–</span><small>BPM</small></div>
+        <div style="text-align:right"><span class="tag" id="mSection">idle</span></div>
+      </div>
+      <div class="events" id="mEvents"></div>
+    </div>
+
+    <div class="sec">Input</div>
+    <div class="card">
+      <select class="sel" id="mDevice" aria-label="Input device"></select>
+      <div class="calib" style="margin-top:14px">
+        <button class="btn small" id="mCalib">Calibrate</button>
+        <div class="info" id="mCalibInfo">Play your music at the volume you normally use, then calibrate for 10 seconds.</div>
+      </div>
+      <div class="bar" id="mCalibBar" hidden><i></i></div>
+    </div>
+
+    <div class="sec">Style</div>
+    <div class="card">
+      <div class="seg accent" id="mProfile"></div>
+      <p class="sub" id="mProfileDesc" style="margin:12px 2px 0"></p>
+      <div class="ctl" style="margin-top:10px"><div class="row"><span class="lbl">Sensitivity</span><span class="val" id="mSensV"></span></div>
+        <input type="range" class="plain" id="mSens" min="0" max="100" aria-label="Sensitivity"></div>
+      <div class="ctl"><div class="row"><span class="lbl">Peak brightness</span><span class="val" id="mMaxV"></span></div>
+        <input type="range" class="bri" id="mMax" min="5" max="100" aria-label="Peak brightness"></div>
+      <div class="ctl"><div class="row"><span class="lbl">Colour range</span><span class="val" id="mCctV"></span></div>
+        <div class="dual" id="mCctDual"><div class="trk"></div><div class="sel" id="mCctSel"></div>
+          <input type="range" id="mCctA" min="0" max="100" aria-label="Warmest colour">
+          <input type="range" id="mCctB" min="0" max="100" aria-label="Coolest colour"></div></div>
+    </div>
+    <div class="sticky-actions"><div class="btns" id="mActions"></div></div>
+  </section>
+
+  <!-- ============================== SCENES ============================== -->
+  <section id="v-scenes" class="view">
+    <h1 class="title">Scenes</h1>
+    <p class="sub">Tap to apply. Edit any scene, or capture the room as it is right now.</p>
+    <div class="list" id="sceneList"></div>
+    <button class="btn" id="sceneNew">+ New scene from the room right now</button>
+  </section>
+
+  <!-- ============================== STATUS ============================== -->
+  <section id="v-status" class="view">
+    <h1 class="title">Status</h1>
+    <p class="sub" id="stSub"></p>
+    <div id="stBanners"></div>
+    <div class="card"><div class="kv" id="stKv"></div></div>
+    <div id="simPanel"></div>
+    <div class="sec">Connect another phone</div>
+    <div class="card" id="connectCard"><p class="sub" style="margin:0">Loading…</p></div>
+    <div class="sec">Log</div>
+    <div class="card"><pre class="logs" id="logs"></pre></div>
+    <div class="sec">Controller</div>
+    <div class="btns" style="flex-direction:column">
+      <button class="btn" id="btnRotate">New pairing PIN (signs out all phones)</button>
+      <button class="btn danger" id="btnQuit">Stop the controller (restores the room)</button>
+    </div>
+  </section>
+</div>
+
+<nav class="tabbar" id="tabs">
+  <button data-v="home" class="on"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Home</button>
+  <button data-v="party"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 17l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/></svg>Party</button>
+  <button data-v="music"><svg viewBox="0 0 24 24"><path d="M9 18V6l11-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></svg>Music</button>
+  <button data-v="scenes"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2"/></svg>Scenes</button>
+  <button data-v="status"><svg viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>Status</button>
+</nav>
+
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true"></div>
+<div class="toast" id="toast"></div>
+<div class="offline" id="offline"><div class="box"><div class="spin"></div><h2>Reconnecting…</h2><p>The controller isn't reachable. Check it is running on the laptop and you are on the same Wi-Fi. Your lights keep their current look.</p></div></div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

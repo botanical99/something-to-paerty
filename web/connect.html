@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Room Lights · Connect a phone</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/static/app.css">
+<style>
+ body{display:flex;align-items:center;justify-content:center;min-height:100dvh;padding:24px}
+ .box{width:100%;max-width:440px;text-align:center}
+ .qr{width:260px}
+ .url{font-size:20px;font-weight:700;margin:6px 0}
+ .simtag{display:inline-block;margin-bottom:12px}
+</style></head>
+<body><div class="box">
+ <span class="pill sim simtag" id="sim" hidden>Simulator – not real lights</span>
+ <h1 class="title" style="margin:0">Scan with your iPhone</h1>
+ <p class="sub">Point the camera at the code (same Wi-Fi). Then Share → <b>Add to Home Screen</b> for a full-screen app.</p>
+ <div class="qr" id="qr"></div>
+ <div class="url" id="url"></div>
+ <p class="sub" id="pinrow"></p>
+ <a class="btn primary" href="/" style="text-decoration:none;margin-top:10px">Open controller here</a>
+</div>
+<script>
+fetch('/api/connect-info').then(r=>r.json()).then(j=>{
+  document.getElementById('qr').innerHTML=j.qr_svg;
+  document.getElementById('url').textContent=j.url;
+  if(j.pin)document.getElementById('pinrow').textContent='PIN '+j.pin+' (only needed if the QR code is not scanned)';
+  if(j.simulated)document.getElementById('sim').hidden=false;
+});
+</script></body></html>

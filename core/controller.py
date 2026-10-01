@@ -29,6 +29,7 @@ class LightingController:
         self.state_file = Path(state_file) if state_file else None
         self.stale_snapshot: dict | None = self._read_state_file()   # left over from an unclean exit
         self.mode, self.name = "idle", ""
+        self.scene = ""                      # name of the scene that produced the current look ('' = manual / none)
         self.params: dict = {}
         self.snapshot: dict | None = None
         self._task: asyncio.Task | None = None
@@ -120,7 +121,7 @@ class LightingController:
         self.snapshot = None
         self._write_state_file(None)
         self._apply_static(self.scenes.get("NORMAL"), Prio.CRITICAL)
-        self.mode, self.name, self.params = "scene", "NORMAL", {}
+        self.mode, self.name, self.params, self.scene = "scene", "NORMAL", {}, "NORMAL"
         self._sync_master_from_scene(self.scenes.get("NORMAL"))
         self.notify()
 
@@ -137,7 +138,7 @@ class LightingController:
         self.snapshot = None
         self._write_state_file(None)
         self._apply_static(sc, Prio.HIGH)
-        self.mode, self.name, self.params = "scene", name, {}
+        self.mode, self.name, self.params, self.scene = "scene", name, {}, name
         self._sync_master_from_scene(sc)
         self.notify()
 
@@ -156,7 +157,7 @@ class LightingController:
         await self._cancel_runner()
         epoch = self.sched.epoch
         self.params = {**effect_defaults(name), **sanitize(params, set(self.layout.fixtures))}
-        self.mode, self.name = "effect", name
+        self.mode, self.name, self.scene = "effect", name, scene_name or ""
         ctx = EffectContext(self.layout, self.sched, epoch, self.params)
         self._task = asyncio.get_running_loop().create_task(self._run_effect(name, ctx), name=f"effect-{name}")
         self.notify()
@@ -190,7 +191,7 @@ class LightingController:
         await self._cancel_runner()
         epoch = self.sched.epoch
         self.params = {**effect_defaults("chase"), **self.music.default_params(), **sanitize(params, set(self.layout.fixtures))}
-        self.mode, self.name = "music", "music"
+        self.mode, self.name, self.scene = "music", "music", scene_name or ""
         try:
             await self.music.start(epoch, self.params)
         except Exception as e:  # noqa: BLE001
@@ -205,6 +206,7 @@ class LightingController:
     async def stop(self, restore: bool = True) -> None:
         was_anim = self.mode in ("effect", "music")
         await self._cancel_runner()
+        self.scene = ""
         if restore and was_anim and self.snapshot:
             self.sched.restore(self.snapshot, Prio.HIGH)
             self.mode, self.name = "idle", ""
@@ -233,7 +235,7 @@ class LightingController:
             for fid in self.layout.fixtures:
                 self.sched.set_light(fid, brightness, cct, prio=Prio.HIGH, tag="master")
             if self.mode in ("scene", "idle"):
-                self.mode, self.name = "manual", ""
+                self.mode, self.name, self.scene = "manual", "", ""
         self.notify()
 
     async def set_fixture(self, fid: str, level: float | None, cct: float | None, on: bool | None = None) -> None:
@@ -250,7 +252,7 @@ class LightingController:
             await self.stop(restore=False)     # a manual tap ends the animation (no fighting)
         self.sched.set_light(fid, level, cct, prio=Prio.HIGH, tag="manual")
         if self.mode in ("scene", "idle"):
-            self.mode, self.name = "manual", ""
+            self.mode, self.name, self.scene = "manual", "", ""
         self.notify()
 
     def save_current_as(self, name: str, label: str | None = None) -> None:
@@ -307,7 +309,7 @@ class LightingController:
     # ------------------------------------------------------------------ state for the UI
     def state(self) -> dict:
         return {
-            "mode": self.mode, "name": self.name, "params": self.params, "master": self.master,
+            "mode": self.mode, "name": self.name, "scene": self.scene, "params": self.params, "master": self.master,
             "has_snapshot": self.snapshot is not None, "error": self.last_error,
             "stale_snapshot": self.stale_snapshot is not None,
             "fixtures": self.sched.public_state(),

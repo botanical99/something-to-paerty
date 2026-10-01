@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Room Lights · Pair</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#07090e"><meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="stylesheet" href="/static/app.css">
+<style>
+ body{display:flex;align-items:center;justify-content:center;min-height:100dvh;padding:24px}
+ .box{width:100%;max-width:360px;text-align:center}
+ .logo{width:76px;height:76px;margin:0 auto 18px;border-radius:22px;background:linear-gradient(135deg,#ffc27a,#ff8a3d);box-shadow:0 10px 40px rgba(255,140,60,.35)}
+ input.pin{width:100%;min-height:64px;border-radius:18px;border:1px solid var(--line);background:var(--card-solid);text-align:center;font-size:30px;letter-spacing:.4em;font-weight:750;margin:18px 0 12px;padding-left:.4em}
+ .err{color:#ff9c9c;min-height:22px;font-size:14px;margin-bottom:8px}
+</style></head>
+<body><div class="box">
+ <div class="logo"></div>
+ <h1 class="title" style="margin:0">Pair this phone</h1>
+ <p class="sub">Enter the 6-digit PIN shown on the laptop, or scan the QR code there and you're in.</p>
+ <input class="pin" id="pin" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" placeholder="••••••">
+ <div class="err" id="err"></div>
+ <button class="btn primary" id="go">Pair</button>
+</div>
+<script>
+const pin=document.getElementById('pin'),err=document.getElementById('err');
+if(location.search.includes('bad=1'))err.textContent='That code was not right.';
+async function go(){
+  err.textContent='';
+  try{
+    const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin:pin.value})});
+    if(r.ok){location.href='/';return}
+    const j=await r.json().catch(()=>({}));err.textContent=j.detail||'Wrong PIN';
+  }catch(e){err.textContent='Cannot reach the controller'}
+}
+document.getElementById('go').onclick=go;
+pin.addEventListener('input',()=>{if(pin.value.length===6)go()});
+</script></body></html>
