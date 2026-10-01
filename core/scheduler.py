@@ -59,6 +59,7 @@ class Stats:
     coalesced: int = 0
     dropped_stale: int = 0
     dropped_noop: int = 0
+    healed: int = 0
     sent_times: deque = field(default_factory=lambda: deque(maxlen=64))
     ack_ms: deque = field(default_factory=lambda: deque(maxlen=64))
     queue_ms: deque = field(default_factory=lambda: deque(maxlen=64))
@@ -74,7 +75,7 @@ class Stats:
         q = sorted(self.queue_ms)
         return {
             "sent": self.sent, "failed": self.failed, "coalesced": self.coalesced,
-            "dropped_stale": self.dropped_stale, "dropped_noop": self.dropped_noop,
+            "dropped_stale": self.dropped_stale, "dropped_noop": self.dropped_noop, "healed": self.healed,
             "rate_5s": self.rate(), "max_queue": self.max_queue,
             "ack_ms_median": round(a[len(a) // 2]) if a else None,
             "ack_ms_p95": round(a[int(0.95 * (len(a) - 1))]) if a else None,
@@ -92,6 +93,7 @@ class Scheduler:
         self.layout, self.link = layout, link
         self.rate = rate
         self.known: dict[str, dict[str, object]] = {}     # what the lamps are believed to be doing
+        self._inflight: dict[tuple, object] = {}          # (lamp, dp) -> value currently being written to the gateway
         self.desired: dict[str, dict[str, object]] = {}   # what we last asked for
         self.pending: dict[tuple, Cmd] = {}
         self.epoch = 0
@@ -165,7 +167,8 @@ class Scheduler:
         self.desired.setdefault(cid, {})[dp] = value
         key = (cid, dp)
         cur = self.pending.get(key)
-        if self.known.get(cid, {}).get(dp) == value:
+        # a write that is still in flight WILL become the lamp's state: compare against that, not the old value
+        if self._inflight.get(key, self.known.get(cid, {}).get(dp)) == value:
             if cur:
                 del self.pending[key]
                 self.stats.coalesced += 1
@@ -259,7 +262,7 @@ class Scheduler:
                 del self.pending[k]
                 self.stats.dropped_stale += 1
                 continue
-            kv = self.known.get(c.cid, {}).get(c.dp)
+            kv = self._inflight.get(c.key, self.known.get(c.cid, {}).get(c.dp))
             if c.analog and isinstance(kv, (int, float)) and isinstance(c.value, (int, float)) \
                     and abs(c.value - kv) < DEADBAND.get(c.dp, 0):
                 del self.pending[k]
@@ -298,9 +301,11 @@ class Scheduler:
                         continue
                 start = time.monotonic()
                 self.pending.pop(cmd.key, None)
+                self._inflight[cmd.key] = cmd.value
                 try:
                     ms = await self.link.write(cmd.cid, cmd.dp, cmd.value)
                 except Exception as e:  # noqa: BLE001
+                    self._inflight.pop(cmd.key, None)
                     self.stats.failed += 1
                     if not isinstance(e, LinkDown):
                         cmd.attempts += 1
@@ -308,7 +313,15 @@ class Scheduler:
                         self.pending[cmd.key] = cmd    # retry unless a newer value arrived meanwhile
                     await asyncio.sleep(0.3)
                     continue
+                self._inflight.pop(cmd.key, None)
                 self.known.setdefault(cmd.cid, {})[cmd.dp] = cmd.value
+                want = self.desired.get(cmd.cid, {}).get(cmd.dp)
+                if want is not None and want != cmd.value and cmd.key not in self.pending:
+                    # the target changed while this write was in flight and nothing is queued for it: heal now
+                    now = time.monotonic()
+                    self.pending[cmd.key] = Cmd(cmd.cid, cmd.dp, want, Prio.HIGH, now, now, None, False, 0, "heal")
+                    self.stats.healed += 1
+                    self.idle_event.clear()
                 self.stats.sent += 1
                 self.stats.sent_times.append(time.monotonic())
                 self.stats.ack_ms.append(ms)

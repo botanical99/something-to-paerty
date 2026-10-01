@@ -218,3 +218,32 @@ def test_audio_source_failure_is_survived(cfg, monkeypatch):
 
     mid_err, err, frames, running = run_virtual(main)
     assert "device unplugged" in mid_err and err == "" and running and frames > 300
+
+
+@pytest.mark.parametrize("profile", ["beat", "club"])
+def test_no_light_is_left_stuck_on_even_when_the_gateway_is_slow(cfg, profile):
+    """Slow gateway (700 ms/command) makes cues expire; the 'back to base' half must still always arrive."""
+    from audio.sources import SyntheticSource
+
+    class Drums(SyntheticSource):
+        """Only the drop (steady four-on-the-floor), then dead silence."""
+
+    async def main():
+        rt = await started(cfg, latency_ms=700)
+        m = rt.ctl.music
+        await rt.ctl.start_music({"device": "demo", "profile": profile})
+        for i in range(120):                                # 25 s of dense beat events, far more than the lamps can follow
+            m._enqueue(MusicEvent("beat", time.monotonic(), 0.9))
+            m._enqueue(MusicEvent("onset_treble", time.monotonic(), 0.9))
+            await asyncio.sleep(0.2)
+        m._pump_task.cancel()                                # the music stops arriving
+        m.source._stop = True
+        await asyncio.sleep(25)
+        lv = {f: s["level"] for f, s in rt.sim_state()["fixtures"].items()}
+        out = (lv, m.profile.skipped, rt.sched.stats.dropped_stale)
+        await rt.ctl.stop(restore=False)
+        await rt.shutdown()
+        return out
+
+    lv, skipped, stale = run_virtual(main)
+    assert max(lv.values()) < 20, lv                         # everything is back at (about) the base glow of 8%

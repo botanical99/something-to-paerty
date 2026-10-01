@@ -65,6 +65,8 @@ class Profile:
         self.flashed: dict[str, float] = {}          # fid -> time it was lifted (so it can be returned)
         self.last_beat_cue = 0.0
         self.beat_n = 0
+        self.reconciled = 0
+        self._last_rec = 0.0
 
     # ---- helpers
     def _desired(self, fid: str) -> dict:
@@ -98,7 +100,9 @@ class Profile:
             self.skipped += 1
             return False
         for f, lv, cc in items:
-            self.ctx.set(f, lv, cc, prio=prio, ttl=ttl, analog=analog)
+            # a cue's "back to base" half must never be allowed to expire, or a light would stay lit forever
+            ret = lv is not None and lv <= self.ctx.lo + 1e-6
+            self.ctx.set(f, lv, cc, prio=Prio.HIGH if ret else prio, ttl=None if ret else ttl, analog=analog)
         self.cues += 1
         return True
 
@@ -134,6 +138,21 @@ class Profile:
     def tick(self, now: float) -> None:
         pass
 
+    def reconcile(self, now: float, protect: set[str]) -> None:
+        """Safety net: any light that is lit above the base glow but is not part of a live cue is put back
+        (covers commands that expired or failed while the gateway was slow or reconnecting)."""
+        if now - self._last_rec < 1.5:
+            return
+        self._last_rec = now
+        lo = self.ctx.lo
+        thr = level_to_raw(lo + 6)
+        for f in self.ring():
+            if f in protect or f == self.head:
+                continue
+            d = self._desired(f)
+            if d.get(DP_ON) is True and (d.get(DP_BRIGHT) or 0) > thr and self.cue([(f, lo, None)], ttl=None):
+                self.reconciled += 1
+
     def idle_return(self, now: float, after: float = 2.2) -> None:
         """If the beat stopped, put the last lit light back to its base look (never leave one stuck on)."""
         if self.head and now - self.last_beat_cue > after:
@@ -164,6 +183,7 @@ class BeatProfile(Profile):
 
     def tick(self, now: float) -> None:
         self.idle_return(now)
+        self.reconcile(now, set())
 
 
 class ClubProfile(Profile):
@@ -281,8 +301,10 @@ class ClubProfile(Profile):
                 self.head, self.pair_prev, self.pos = None, [], -1
                 if self.mode in ("drop", "breakdown"):
                     self.mode = "steady"
-        if self.mode == "steady" or self.mode == "drop":
+        if self.mode in ("steady", "drop"):
             self.idle_return(now)
+        if self.mode in ("steady", "breakdown"):
+            self.reconcile(now, set(self.pair_prev) | {str(a[2]) for a in self.actions if a[1] == "spark_off"})
 
 
 class AmbientProfile(Profile):

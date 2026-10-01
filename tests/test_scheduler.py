@@ -169,3 +169,40 @@ def test_commands_wait_through_an_outage_and_apply_after_reconnect(cfg):
     assert end == "online"
     assert reconnects >= 2                        # the real supervisor reconnected
     assert abs(truth[1] - 66) < 1.5               # and the queued command was delivered
+
+
+def test_target_changed_while_a_write_is_in_flight_is_not_lost(cfg):
+    """Regression (found by the simulator): 'light up' is being written, then 'back to base' is submitted before
+    the gateway has acknowledged it. The lamp must end at the LAST requested value, never stay lit."""
+    async def main():
+        rt = await started(cfg, latency_ms=700)
+        s = rt.sched
+        await settle(rt)
+        base = truth_levels(rt)["R1"][1]
+        s.set_light("R1", 90)
+        await asyncio.sleep(0.5)                  # the write is on the wire (700 ms ack)
+        s.set_light("R1", base)                   # ... and the effect already wants it back
+        await settle(rt)
+        out = (truth_levels(rt)["R1"][1], base, s.stats.healed)
+        await rt.shutdown()
+        return out
+
+    final, base, healed = run_virtual(main)
+    assert abs(final - base) < 1.5, (final, base)
+
+
+def test_inflight_write_is_not_duplicated(cfg):
+    async def main():
+        rt = await started(cfg, latency_ms=700)
+        s = rt.sched
+        await settle(rt)
+        n0 = rt.sim.accepted
+        s.set_light("R2", 77)
+        await asyncio.sleep(0.5)
+        s.set_light("R2", 77)                     # same value while it is on the wire: nothing more to send
+        await settle(rt)
+        out = rt.sim.accepted - n0
+        await rt.shutdown()
+        return out
+
+    assert run_virtual(main) <= 2                 # at most ON + BRIGHT, no duplicates
