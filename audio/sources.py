@@ -8,7 +8,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from typing import AsyncIterator
+from typing import Any, AsyncIterator
 
 import numpy as np
 
@@ -240,8 +240,8 @@ class SoundDeviceSource:
         self.hop, self.device = hop, device
         self.sr = 44100
         self._q: asyncio.Queue | None = None
-        self._stream = None
-        self._loop: asyncio.AbstractEventLoop | None = None
+        self._stream: Any = None
+        self._loop: Any = None
 
     async def start(self) -> None:
         sd = _sd()
@@ -302,6 +302,6 @@ def make_source(device: str | None, *, realtime: bool = True):
     if device in (None, "", "default"):
         return SoundDeviceSource(None)
     try:
-        return SoundDeviceSource(int(device))
+        return SoundDeviceSource(int(device or 0))
     except ValueError:
         return SoundDeviceSource(None)

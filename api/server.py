@@ -11,6 +11,7 @@ import logging
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Any
 
 from fastapi import Body, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
@@ -39,7 +40,8 @@ class Runtime:
         self.settings = settings
         cdir = settings.config_dir
         self.layout = Layout.load(cdir, simulate=settings.simulate)
-        self.sim = None
+        self.sim: Any = None
+        self.link: Any
         if settings.simulate:
             from hardware.simulator import SimGateway, SimLink
             self.sim = SimGateway([f.cid for f in self.layout.fixtures.values()],

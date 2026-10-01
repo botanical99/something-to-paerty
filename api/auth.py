@@ -89,7 +89,7 @@ class Auth:
         except Exception:  # noqa: BLE001
             return False
         m = c.get(COOKIE)
-        return bool(m) and hmac.compare_digest(m.value, self.token())
+        return m is not None and hmac.compare_digest(m.value, self.token())
 
     def pin_ok(self, pin: str | None) -> bool:
         return bool(pin) and hmac.compare_digest(str(pin), self.pin)

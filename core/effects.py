@@ -17,7 +17,7 @@ import time
 from dataclasses import dataclass
 from typing import Awaitable, Callable
 
-from core.model import Layout, cct_to_raw, level_to_raw
+from core.model import Layout, level_to_raw
 from core.scheduler import Prio, Scheduler
 
 DEFAULT_PARAMS = {

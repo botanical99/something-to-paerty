@@ -63,7 +63,7 @@ def install_close_handler(holder: dict) -> None:
     """Windows: closing the console window should still restore the room."""
     if os.name != "nt":
         return
-    handler_t = ctypes.WINFUNCTYPE(ctypes.c_int, ctypes.c_uint)
+    handler_t = ctypes.WINFUNCTYPE(ctypes.c_int, ctypes.c_uint)  # type: ignore[attr-defined]
 
     @handler_t
     def handler(event):  # CTRL_CLOSE_EVENT=2, LOGOFF=5, SHUTDOWN=6
@@ -81,6 +81,17 @@ def install_close_handler(holder: dict) -> None:
     ctypes.windll.kernel32.SetConsoleCtrlHandler(handler, True)  # type: ignore[attr-defined]
 
 
+def already_running(port: int) -> bool:
+    """A second START must not fight the first one for the gateway's single connection slot."""
+    import json
+    import urllib.request
+    try:
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}/api/health", timeout=1.5) as r:
+            return bool(json.loads(r.read()).get("ok"))
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description="Room lights controller")
     ap.add_argument("--simulate", action="store_true", help="use the built-in simulator instead of the real gateway")
@@ -90,6 +101,11 @@ def main(argv: list[str] | None = None) -> None:
 
     settings = Settings.load(simulate=True if a.simulate else None, port=a.port,
                              open_browser=False if a.no_browser else None)
+    if already_running(settings.port):
+        print(f"\n  The controller is already running on port {settings.port}  ->  http://localhost:{settings.port}\n")
+        if settings.open_browser and hasattr(os, "startfile"):
+            os.startfile(f"http://localhost:{settings.port}/connect")  # type: ignore[attr-defined]
+        return
     setup_logging(settings.log_dir)
     import uvicorn
 

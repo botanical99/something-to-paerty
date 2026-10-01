@@ -226,22 +226,25 @@ class ClubProfile(Profile):
         if n % 4 == 0 and pairs:                              # downbeat: a mirrored pair
             self.pair_i = (self.pair_i + 1) % len(pairs)
             cur = pairs[self.pair_i]
-            items = [(f, lvl, self.ctx.cct_mid) for f in cur] + [(f, lo, None) for f in self.pair_prev if f not in cur]
+            items: list[tuple[str, float | None, float | None]] = [(f, lvl, self.ctx.cct_mid) for f in cur]
+            items += [(f, lo, None) for f in self.pair_prev if f not in cur]
             if self.cue(items, ttl=0.7):
                 self.pair_prev = cur
                 self.last_beat_cue = now
                 self.head = None
         elif n % 2 == 0:                                      # half-bar: one light steps round the ring
             head, prev = self.step_head()
-            items = [(head, lvl, None)] + ([(prev, lo, None)] if prev else [])
-            if self.cue(items, ttl=0.7):
+            items2: list[tuple[str, float | None, float | None]] = [(head, lvl, None)]
+            if prev:
+                items2.append((prev, lo, None))
+            if self.cue(items2, ttl=0.7):
                 self.last_beat_cue = now
 
     def _ripple(self, up: bool) -> None:
         lo, _ = self.base()
         hi = self.ctx.hi
         ring = self.ring()
-        items = [(f, hi if up else lo, self.ctx.cct_b if up else self.ctx.cct_mid) for f in ring]
+        items: list[tuple[str, float | None, float | None]] = [(f, hi if up else lo, self.ctx.cct_b if up else self.ctx.cct_mid) for f in ring]
         # a drop may borrow up to 6 commands from the future budget; the cue itself is brightness-led
         self.cue([(f, lv, None) for f, lv, _ in items], prio=Prio.HIGH, ttl=2.5, debt=6.0)
         if up:

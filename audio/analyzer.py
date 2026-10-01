@@ -100,6 +100,7 @@ class BeatTracker:
         self.last_beat: float | None = None
         self._next_eval = 0.0
         self._low_conf_since: float | None = None
+        self._recent: deque[float] = deque(maxlen=5)     # last tempo estimates, to judge stability
 
     # ---- called every frame with the onset-strength envelope
     def push(self, t: float, value: float) -> None:
@@ -139,6 +140,7 @@ class BeatTracker:
         self._low_conf_since = None
         per = (best + max(-0.5, min(0.5, off))) / self.fps
         self.period = per if (self.period is None or abs(per / self.period - 1) > 0.15) else 0.6 * self.period + 0.4 * per
+        self._recent.append(per)
         self._find_phase(xm)
 
     def _find_phase(self, xm) -> None:
@@ -200,7 +202,13 @@ class BeatTracker:
 
     @property
     def bpm(self) -> float | None:
-        return round(60.0 / self.period, 1) if self.period and self.confidence >= 0.10 else None
+        """Only reported while the tempo estimate is steady (a snare roll or a build must not show a fake BPM)."""
+        if not self.period or self.confidence < 0.25 or len(self._recent) < 4:
+            return None
+        r = list(self._recent)[-4:]
+        if max(r) / min(r) > 1.06:
+            return None
+        return round(60.0 / self.period, 1)
 
 
 @dataclass

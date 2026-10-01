@@ -12,7 +12,7 @@ import json
 import logging
 import time
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable
 
 from core.effects import EFFECTS, DEFAULT_PARAMS, EffectContext, effect_defaults
 from core.model import Layout
@@ -33,7 +33,7 @@ class LightingController:
         self.params: dict = {}
         self.snapshot: dict | None = None
         self._task: asyncio.Task | None = None
-        self.music = None                       # MusicDirector, attached by the app (optional)
+        self.music: Any = None                  # MusicDirector, attached by the app (optional)
         self.listeners: list[Callable[[], None]] = []
         self.last_error = ""
         self._housekeeping: asyncio.Task | None = None

@@ -1,5 +1,4 @@
 """LAN-only gate, PIN pairing, brute-force brake.  (Logic is hardware independent.)"""
-import time
 
 import pytest
 from fastapi.testclient import TestClient
