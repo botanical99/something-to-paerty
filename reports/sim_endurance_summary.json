@@ -1,7 +1,7 @@
 {
   "party_30_min": {
     "elapsed": 1800.0,
-    "rate": 2.592,
+    "rate": 2.659,
     "rejected": 0,
     "busiest": 5,
     "queue": 6,
@@ -9,7 +9,7 @@
     "failed": 2,
     "mode": "idle",
     "err": "",
-    "sent": 4665,
+    "sent": 4786,
     "restored_on_state": true,
     "tasks_min_max": [
       7,
@@ -19,7 +19,7 @@
   },
   "music_30_min": {
     "elapsed": 1810.1,
-    "rate": 1.717,
+    "rate": 1.785,
     "rejected": 0,
     "busiest": 5,
     "queue": 12,
@@ -30,14 +30,14 @@
       "events": 12794,
       "dropped": 0,
       "stale": 0,
-      "cues": 299,
-      "skipped": 81,
-      "budget_spent": 3137.0,
+      "cues": 317,
+      "skipped": 122,
+      "budget_spent": 3255.0,
       "audio_fps": 43.1
     },
     "err": "",
     "cal": "ok",
-    "sent": 3108,
+    "sent": 3231,
     "bpm": 123.4,
     "beats": 2794,
     "restored": true,
